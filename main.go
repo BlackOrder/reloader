@@ -2,8 +2,8 @@ package reloader
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -11,12 +11,12 @@ import (
 
 // Config lets each binary decide what to watch and how to react.
 type Config struct {
-	TargetFile string         // absolute path to the binary (or any file)
-	Signal     syscall.Signal // e.g. syscall.SIGHUP
-	Debounce   time.Duration  // wait before sending (default 3s)
-	RetryDelay time.Duration  // wait before recreating watcher (default 2s)
-	OnEvent    func(string)   // optional callback for logging
-	OnError    func(error)    // optional callback for logging
+	TargetFile string        // absolute path to the binary (or any file)
+	OnChange   func()        // callback for reloading the binary
+	Debounce   time.Duration // wait before sending (default 3s)
+	RetryDelay time.Duration // wait before recreating watcher (default 2s)
+	OnEvent    func(string)  // optional callback for logging
+	OnError    func(error)   // optional callback for logging
 }
 
 // Watch blocks until ctx is done.
@@ -26,6 +26,9 @@ func Watch(ctx context.Context, cfg Config) error {
 	}
 	if cfg.RetryDelay == 0 {
 		cfg.RetryDelay = 2 * time.Second
+	}
+	if cfg.OnChange == nil {
+		return errors.New("OnChange callback must be set")
 	}
 
 	for {
@@ -80,7 +83,8 @@ func Watch(ctx context.Context, cfg Config) error {
 				if cfg.OnEvent != nil {
 					cfg.OnEvent("sending signal")
 				}
-				_ = syscall.Kill(syscall.Getpid(), cfg.Signal)
+				cfg.OnChange() // trigger reload
+
 				debounce.Stop()
 
 			case err := <-w.Errors:

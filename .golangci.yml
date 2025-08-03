@@ -1,0 +1,108 @@
+linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+  golint:
+    min-confidence: 0
+  gocyclo:
+    min-complexity: 20
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+          - "!$test"
+        allow:
+          - $gostd
+          - github.com/fsnotify/fsnotify
+  misspell:
+    locale: US
+  unused:
+    check-exported: false
+  unparam:
+    check-exported: false
+  nakedret:
+    max-func-lines: 30
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+      - nestingReduce
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exhaustive
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+    - mnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+
+  # don't enable:
+  # - asciicheck
+  # - gochecknoglobals
+  # - gocognit
+  # - godot
+  # - godox
+  # - goerr113
+  # - maligned
+  # - nestif
+  # - prealloc
+  # - testpackage
+  # - revive
+  # - wsl
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - mnd
+        - goconst
+        - gosec
+
+run:
+  timeout: 5m

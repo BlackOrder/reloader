@@ -3,8 +3,8 @@ linters-settings:
     enable-all: true
     disable:
       - shadow
-  golint:
-    min-confidence: 0
+  revive:
+    confidence: 0.8
   gocyclo:
     min-complexity: 20
   dupl:
@@ -24,8 +24,6 @@ linters-settings:
           - github.com/blackorder/reloader
   misspell:
     locale: US
-  unused:
-    check-exported: false
   unparam:
     check-exported: false
   nakedret:
@@ -74,6 +72,7 @@ linters:
     - nakedret
     - noctx
     - nolintlint
+    - revive
     - rowserrcheck
     - staticcheck
     - stylecheck
@@ -82,20 +81,14 @@ linters:
     - unparam
     - unused
     - whitespace
-
-  # don't enable:
-  # - asciicheck
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - testpackage
-  # - revive
-  # - wsl
+    - errname
+    - errorlint
+    - copyloopvar
+    - forcetypeassert
+    - gomoddirectives
+    - importas
+    - nilnil
+    - usetesting
 
 issues:
   exclude-rules:
@@ -104,6 +97,12 @@ issues:
         - mnd
         - goconst
         - gosec
+        - errname
+        - forcetypeassert
+        - usetesting
+    - path: example.*\.go
+      linters:
+        - errcheck
 
 run:
   timeout: 5m

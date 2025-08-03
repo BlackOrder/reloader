@@ -2,6 +2,7 @@ package reloader
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -24,7 +25,7 @@ func TestConfig_Defaults(t *testing.T) {
 	defer cancel()
 
 	err := Watch(ctx, config)
-	if err != context.DeadlineExceeded {
+	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("Expected context.DeadlineExceeded, got %v", err)
 	}
 
@@ -57,7 +58,7 @@ func TestWatch_FileChange(t *testing.T) {
 	var mu sync.Mutex
 	var changeCount int
 	var events []string
-	var errors []error
+	var errorList []error
 
 	config := Config{
 		TargetFile: tempFile,
@@ -75,7 +76,7 @@ func TestWatch_FileChange(t *testing.T) {
 		},
 		OnError: func(err error) {
 			mu.Lock()
-			errors = append(errors, err)
+			errorList = append(errorList, err)
 			mu.Unlock()
 		},
 	}
@@ -104,8 +105,8 @@ func TestWatch_FileChange(t *testing.T) {
 	gotChanges := changeCount
 	gotEvents := make([]string, len(events))
 	copy(gotEvents, events)
-	gotErrors := make([]error, len(errors))
-	copy(gotErrors, errors)
+	gotErrors := make([]error, len(errorList))
+	copy(gotErrors, errorList)
 	mu.Unlock()
 
 	if gotChanges == 0 {
@@ -123,7 +124,7 @@ func TestWatch_FileChange(t *testing.T) {
 	}
 
 	cancel()
-	if err := <-done; err != nil && err != context.Canceled {
+	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from Watch: %v", err)
 	}
 }
@@ -184,7 +185,7 @@ func TestWatch_MultipleChanges_Debounced(t *testing.T) {
 	}
 
 	cancel()
-	if err := <-done; err != nil && err != context.Canceled {
+	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from Watch: %v", err)
 	}
 }
@@ -210,7 +211,7 @@ func TestWatch_NonExistentFile(t *testing.T) {
 	defer cancel()
 
 	err := Watch(ctx, config)
-	if err != context.DeadlineExceeded {
+	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("Expected context.DeadlineExceeded, got %v", err)
 	}
 
@@ -251,7 +252,7 @@ func TestWatch_ContextCancellation(t *testing.T) {
 	// Should get context.Canceled error
 	select {
 	case err := <-done:
-		if err != context.Canceled {
+		if !errors.Is(err, context.Canceled) {
 			t.Errorf("Expected context.Canceled, got %v", err)
 		}
 	case <-time.After(1 * time.Second):
@@ -322,7 +323,7 @@ func TestWatch_FileRemovalAndRecreation(t *testing.T) {
 	// Clean up
 	os.Remove(tempFile)
 	cancel()
-	if err := <-done; err != nil && err != context.Canceled {
+	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from Watch: %v", err)
 	}
 }
@@ -335,7 +336,7 @@ func TestWatch_ConditionalReload(t *testing.T) {
 	var mu sync.Mutex
 	var reloadCount int
 	var events []string
-	var errors []error
+	var errorList []error
 
 	// Simulate a feature flag
 	reloadEnabled := true
@@ -358,7 +359,7 @@ func TestWatch_ConditionalReload(t *testing.T) {
 		},
 		OnError: func(err error) {
 			mu.Lock()
-			errors = append(errors, err)
+			errorList = append(errorList, err)
 			mu.Unlock()
 		},
 	}
@@ -395,7 +396,7 @@ func TestWatch_ConditionalReload(t *testing.T) {
 	mu.Lock()
 	gotReloads := reloadCount
 	gotEvents := len(events)
-	gotErrors := len(errors)
+	gotErrors := len(errorList)
 	mu.Unlock()
 
 	if gotReloads != 1 {
@@ -407,11 +408,11 @@ func TestWatch_ConditionalReload(t *testing.T) {
 	}
 
 	if gotErrors > 0 {
-		t.Errorf("Unexpected errors: %v", errors)
+		t.Errorf("Unexpected errors: %v", errorList)
 	}
 
 	cancel()
-	if err := <-done; err != nil && err != context.Canceled {
+	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from Watch: %v", err)
 	}
 }
@@ -479,7 +480,7 @@ func TestWatch_LongDebounce(t *testing.T) {
 	}
 
 	cancel()
-	if err := <-done; err != nil && err != context.Canceled {
+	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from Watch: %v", err)
 	}
 }
@@ -549,7 +550,7 @@ func TestSelfMonitor(t *testing.T) {
 	var mu sync.Mutex
 	var reloadCount int
 	var events []string
-	var errors []error
+	var errorList []error
 
 	config := SelfMonitorConfig{
 		OnReload: func() {
@@ -566,7 +567,7 @@ func TestSelfMonitor(t *testing.T) {
 		},
 		OnError: func(err error) {
 			mu.Lock()
-			errors = append(errors, err)
+			errorList = append(errorList, err)
 			mu.Unlock()
 		},
 	}
@@ -623,7 +624,7 @@ func TestSelfMonitor(t *testing.T) {
 		},
 		OnError: func(err error) {
 			mu.Lock()
-			errors = append(errors, err)
+			errorList = append(errorList, err)
 			mu.Unlock()
 		},
 	}
@@ -646,7 +647,7 @@ func TestSelfMonitor(t *testing.T) {
 	mu.Lock()
 	gotReloads := reloadCount
 	gotEvents := len(events)
-	gotErrors := len(errors)
+	gotErrors := len(errorList)
 	mu.Unlock()
 
 	if gotReloads == 0 {
@@ -658,11 +659,11 @@ func TestSelfMonitor(t *testing.T) {
 	}
 
 	if gotErrors > 0 {
-		t.Errorf("Unexpected errors: %v", errors)
+		t.Errorf("Unexpected errors: %v", errorList)
 	}
 
 	cancel2()
-	if err := <-done2; err != nil && err != context.Canceled {
+	if err := <-done2; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from Watch: %v", err)
 	}
 }
@@ -686,7 +687,7 @@ func TestWatchMultiple_BasicFunctionality(t *testing.T) {
 	var mu sync.Mutex
 	var changedFiles []string
 	var events []string
-	var errors []error
+	var errorList []error
 
 	config := MultiConfig{
 		TargetFiles: []string{file1, file2},
@@ -704,7 +705,7 @@ func TestWatchMultiple_BasicFunctionality(t *testing.T) {
 		},
 		OnError: func(err error) {
 			mu.Lock()
-			errors = append(errors, err)
+			errorList = append(errorList, err)
 			mu.Unlock()
 		},
 	}
@@ -737,7 +738,7 @@ func TestWatchMultiple_BasicFunctionality(t *testing.T) {
 	gotChangedFiles := make([]string, len(changedFiles))
 	copy(gotChangedFiles, changedFiles)
 	gotEvents := len(events)
-	gotErrors := len(errors)
+	gotErrors := len(errorList)
 	mu.Unlock()
 
 	if len(gotChangedFiles) < 2 {
@@ -767,11 +768,11 @@ func TestWatchMultiple_BasicFunctionality(t *testing.T) {
 	}
 
 	if gotErrors > 0 {
-		t.Errorf("Unexpected errors: %v", errors)
+		t.Errorf("Unexpected errors: %v", errorList)
 	}
 
 	cancel()
-	if err := <-done; err != nil && err != context.Canceled {
+	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from WatchMultiple: %v", err)
 	}
 }
@@ -866,7 +867,7 @@ func TestWatchMultiple_SameDirectory(t *testing.T) {
 	}
 
 	cancel()
-	if err := <-done; err != nil && err != context.Canceled {
+	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("Unexpected error from WatchMultiple: %v", err)
 	}
 }

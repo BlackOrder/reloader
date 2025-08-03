@@ -21,6 +21,7 @@ linters-settings:
         allow:
           - $gostd
           - github.com/fsnotify/fsnotify
+          - github.com/blackorder/reloader
   misspell:
     locale: US
   unused:
